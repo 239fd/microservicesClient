@@ -1,0 +1,17 @@
+.yandex-login-button {
+    display: inline-block;
+    font-size: 14px;
+    padding: 8px 14px 16px 14px;
+    background-color: #ffcc00;
+    color: #000;
+    font-weight: bold;
+    border-radius: 6px;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.3s;
+    width: 100%;
+    height: 30px;
+}
+.yandex-login-button:hover {
+    background-color: #e6b800;
+}

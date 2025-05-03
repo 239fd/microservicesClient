@@ -1,0 +1,11 @@
+.Table{
+    width:80%;
+    height: 70%;
+    padding-top: 2%;
+    margin: auto;
+}
+.take-button {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
