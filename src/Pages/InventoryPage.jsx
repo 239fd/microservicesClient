@@ -2,13 +2,12 @@ import React, { useState, useEffect } from "react";
 import {
     Box,
     Button,
-    Typography,
     TextField,
     Grid,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import NavBar from "../Components/NavBar";
-import axios from "axios";
+import { api } from "../Redux/axios";
 import { toast } from "react-toastify";
 
 const InventoryPage = () => {
@@ -25,8 +24,8 @@ const InventoryPage = () => {
     const fetchProducts = async () => {
         try {
             const token = localStorage.getItem("jwtToken");
-            const response = await axios.get(
-                "http://localhost:8765/product-service/api/product/all",
+            const response = await api.get(
+                "/product-service/api/product/all",
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -95,8 +94,8 @@ const InventoryPage = () => {
         try {
             setIsSubmitting(true);
             const token = localStorage.getItem("jwtToken");
-            const response = await axios.post(
-                "http://localhost:8765/product-service/api/product/inventory",
+            const response = await api.post(
+                "/product-service/api/product/inventory",
                 requestBody,
                 {
                     headers: {
@@ -178,6 +177,22 @@ const InventoryPage = () => {
                         </Button>
                     </Grid>
                 </Grid>
+                {selectedProducts.length > 0 && quantities && (
+                    <Box sx={{ mt: 2 }}>
+                        {(() => {
+                            const quantitiesArray = quantities.split(",").map((q) => q.trim());
+                            return selectedProducts.map((id, index) => {
+                                const product = products.find((p) => p.id === id);
+                                const qty = quantitiesArray[index];
+                                return product ? (
+                                    <div key={id}>
+                                        {product.name}: {qty}
+                                    </div>
+                                ) : null;
+                            });
+                        })()}
+                    </Box>
+                )}
                 <Grid container spacing={2} alignItems="center" sx={{ mt: 2 }}>
                     <Grid item xs={12}>
                         <Button

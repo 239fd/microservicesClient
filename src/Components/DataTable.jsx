@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import { Box } from '@mui/material';
-import axios from 'axios';
+import {api} from '../Redux/axios';
 import { toast } from 'react-toastify';
 
 const DataTable = () => {
@@ -22,7 +22,7 @@ const DataTable = () => {
                 return;
             }
 
-            const response = await axios.get('http://localhost:8765/product-service/api/product/all', {
+            const response = await api.get('/product-service/api/product/all', {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },

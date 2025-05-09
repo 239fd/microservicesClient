@@ -11,7 +11,7 @@ import {
     Button,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import axios from "axios";
+import { api } from "../Redux/axios";
 import { toast } from "react-toastify";
 import NavBar from "../Components/NavBar";
 import EditIcon from "@mui/icons-material/Edit";
@@ -22,12 +22,14 @@ const ProductManagementPage = () => {
     const [products, setProducts] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [openEditDialog, setOpenEditDialog] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [productToDelete, setProductToDelete] = useState(null);
 
     const handleSearch = async () => {
         try {
             const token = localStorage.getItem("jwtToken");
-            const { data } = await axios.get(
-                `http://localhost:8765/product-service/api/product/search?query=${query}`,
+            const { data } = await api.get(
+                `/product-service/api/product/search?query=${query}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setProducts(data || []);
@@ -42,17 +44,25 @@ const ProductManagementPage = () => {
         setOpenEditDialog(true);
     };
 
-    const handleDelete = async (id) => {
+    const handleDeleteClick = (product) => {
+        setProductToDelete(product);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDeleteProduct = async () => {
+        if (!productToDelete) return;
         try {
             const token = localStorage.getItem("jwtToken");
-            await axios.delete(
-                `http://localhost:8765/product-service/api/product/${id}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.delete(`/product-service/api/product/${productToDelete.id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             toast.success("Товар удалён.");
-            setProducts((prev) => prev.filter((p) => p.id !== id));
+            setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
         } catch {
             toast.error("Ошибка при удалении товара.");
+        } finally {
+            setDeleteDialogOpen(false);
+            setProductToDelete(null);
         }
     };
 
@@ -70,8 +80,8 @@ const ProductManagementPage = () => {
                 weight: selectedProduct.weight,
                 bestBeforeDate: selectedProduct.bestBeforeDate,
             };
-            await axios.put(
-                `http://localhost:8765/product-service/api/product/${selectedProduct.id}`,
+            await api.put(
+                `/product-service/api/product/${selectedProduct.id}`,
                 payload,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -97,7 +107,6 @@ const ProductManagementPage = () => {
             field: "bestBeforeDate",
             headerName: "Годен до",
             width: 130,
-            // здесь безопасно форматируем дату
             valueFormatter: ({ value }) => (value ? value.split("T")[0] : ""),
         },
         {
@@ -112,7 +121,7 @@ const ProductManagementPage = () => {
                         <IconButton onClick={() => handleEditClick(row)}>
                             <EditIcon color="primary" />
                         </IconButton>
-                        <IconButton onClick={() => handleDelete(row.id)}>
+                        <IconButton onClick={() => handleDeleteClick(row)}>
                             <DeleteIcon color="error" />
                         </IconButton>
                     </>
@@ -142,7 +151,6 @@ const ProductManagementPage = () => {
                     </Button>
                 </Box>
 
-                {/* рендерим DataGrid только когда данные есть */}
                 {products.length > 0 && (
                     <DataGrid
                         rows={products}
@@ -153,6 +161,7 @@ const ProductManagementPage = () => {
                     />
                 )}
 
+                {/* Диалог редактирования */}
                 <Dialog
                     open={openEditDialog}
                     onClose={() => setOpenEditDialog(false)}
@@ -274,6 +283,22 @@ const ProductManagementPage = () => {
                         <Button onClick={() => setOpenEditDialog(false)}>Отмена</Button>
                         <Button onClick={handleSave} variant="contained">
                             Сохранить
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Диалог удаления */}
+                <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+                    <DialogTitle>Удаление товара</DialogTitle>
+                    <DialogContent>
+                        Вы уверены, что хотите удалить товар <strong>{productToDelete?.name}</strong>?
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setDeleteDialogOpen(false)} color="primary">
+                            Отмена
+                        </Button>
+                        <Button onClick={confirmDeleteProduct} color="error">
+                            Удалить
                         </Button>
                     </DialogActions>
                 </Dialog>

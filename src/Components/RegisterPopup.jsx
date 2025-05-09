@@ -1,7 +1,7 @@
-import React, { useReducer, useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { registerUserData, registerDirectorData } from "../Redux/Slies/authSlice";
+import React, {useReducer, useEffect} from "react";
+import {useDispatch} from "react-redux";
+import {useNavigate} from "react-router-dom";
+import {registerUserData, registerDirectorData} from "../Redux/Slies/authSlice";
 import {
     Box,
     TextField,
@@ -16,7 +16,7 @@ import {
     FormControl
 } from '@mui/material';
 import '../Styles/RegisterPopup.css';
-import { toast } from "react-toastify";
+import {toast} from "react-toastify";
 
 const initialFormState = {
     firstName: '',
@@ -34,7 +34,7 @@ const initialFormState = {
 function formReducer(state, action) {
     switch (action.type) {
         case "SET_FIELD":
-            return { ...state, [action.field]: action.value };
+            return {...state, [action.field]: action.value};
         case "RESET":
             return initialFormState;
         default:
@@ -48,14 +48,14 @@ const Roles = {
     DIRECTOR: "director"
 };
 
-const RegisterPopup = ({ open, onClose }) => {
+const RegisterPopup = ({open, onClose}) => {
     const [form, dispatchForm] = useReducer(formReducer, initialFormState);
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
     useEffect(() => {
         if (!open) {
-            dispatchForm({ type: "RESET" });
+            dispatchForm({type: "RESET"});
         }
     }, [open]);
 
@@ -67,9 +67,18 @@ const RegisterPopup = ({ open, onClose }) => {
         /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/.test(password);
 
     const handleRegister = async () => {
-        const { username, password, role, firstName, secondName, surname, phone, isNewOrganization, organizationNumber } = form;
+        const {
+            username,
+            password,
+            role,
+            firstName,
+            secondName,
+            phone,
+            isNewOrganization,
+            organizationNumber
+        } = form;
 
-        if (!firstName || !secondName || !surname || !phone || !role || !username || !password) {
+        if (!firstName || !secondName || !phone || !role || !username || !password) {
             toast.error("Пожалуйста, заполните все поля.");
             return;
         }
@@ -84,8 +93,8 @@ const RegisterPopup = ({ open, onClose }) => {
             return;
         }
 
-        if (!validateName(firstName) || !validateName(secondName) || !validateName(surname)) {
-            toast.error("Имя, фамилия и отчество должны содержать минимум 2 буквы и только буквы.");
+        if (!validateName(firstName) || !validateName(secondName)) {
+            toast.error("Имя и фамилия должны содержать минимум 2 буквы и только буквы.");
             return;
         }
 
@@ -140,7 +149,7 @@ const RegisterPopup = ({ open, onClose }) => {
     };
 
     const handleClose = () => {
-        dispatchForm({ type: "RESET" });
+        dispatchForm({type: "RESET"});
         onClose();
     };
 
@@ -151,20 +160,29 @@ const RegisterPopup = ({ open, onClose }) => {
 
                 <TextField label="Имя" fullWidth margin="normal"
                            value={form.firstName}
-                           onChange={(e) => dispatchForm({ type: "SET_FIELD", field: "firstName", value: e.target.value })}
+                           onChange={(e) => dispatchForm({
+                               type: "SET_FIELD",
+                               field: "firstName",
+                               value: e.target.value
+                           })}
                 />
                 <TextField label="Фамилия" fullWidth margin="normal"
                            value={form.secondName}
-                           onChange={(e) => dispatchForm({ type: "SET_FIELD", field: "secondName", value: e.target.value })}
+                           onChange={(e) => dispatchForm({
+                               type: "SET_FIELD",
+                               field: "secondName",
+                               value: e.target.value
+                           })}
                 />
                 <TextField label="Отчество" fullWidth margin="normal"
                            value={form.surname}
-                           onChange={(e) => dispatchForm({ type: "SET_FIELD", field: "surname", value: e.target.value })}
+                           onChange={(e) => dispatchForm({type: "SET_FIELD", field: "surname", value: e.target.value})}
                 />
 
                 <FormControl fullWidth margin="normal">
                     <InputLabel>Роль</InputLabel>
-                    <Select value={form.role} onChange={(e) => dispatchForm({ type: "SET_FIELD", field: "role", value: e.target.value })}>
+                    <Select value={form.role}
+                            onChange={(e) => dispatchForm({type: "SET_FIELD", field: "role", value: e.target.value})}>
                         <MenuItem value={Roles.WORKER}>Рабочий</MenuItem>
                         <MenuItem value={Roles.ACCOUNTANT}>Бухгалтер</MenuItem>
                         <MenuItem value={Roles.DIRECTOR}>Директор</MenuItem>
@@ -177,7 +195,7 @@ const RegisterPopup = ({ open, onClose }) => {
                         fullWidth margin="normal"
                         value={form.organizationNumber}
                         onChange={(e) =>
-                            dispatchForm({ type: "SET_FIELD", field: "organizationNumber", value: e.target.value })
+                            dispatchForm({type: "SET_FIELD", field: "organizationNumber", value: e.target.value})
                         }
                     />
                 )}
@@ -185,17 +203,17 @@ const RegisterPopup = ({ open, onClose }) => {
                 <TextField
                     label="Логин" fullWidth margin="normal"
                     value={form.username}
-                    onChange={(e) => dispatchForm({ type: "SET_FIELD", field: "username", value: e.target.value })}
+                    onChange={(e) => dispatchForm({type: "SET_FIELD", field: "username", value: e.target.value})}
                 />
                 <TextField
                     label="Пароль" type="password" fullWidth margin="normal"
                     value={form.password}
-                    onChange={(e) => dispatchForm({ type: "SET_FIELD", field: "password", value: e.target.value })}
+                    onChange={(e) => dispatchForm({type: "SET_FIELD", field: "password", value: e.target.value})}
                 />
                 <TextField
                     label="Телефон" fullWidth margin="normal"
                     value={form.phone}
-                    onChange={(e) => dispatchForm({ type: "SET_FIELD", field: "phone", value: e.target.value })}
+                    onChange={(e) => dispatchForm({type: "SET_FIELD", field: "phone", value: e.target.value})}
                 />
 
 

@@ -11,7 +11,7 @@ import {
     DialogActions,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import axios from "axios";
+import { api } from "../Redux/axios";
 import { toast } from "react-toastify";
 import NavBar from "../Components/NavBar";
 import { useNavigate } from "react-router-dom";
@@ -30,9 +30,10 @@ const WarehousePage = () => {
     const [newCell, setNewCell] = useState({ length: 1.0, width: 1.0, height: 1.0 });
     const [cellCount, setCellCount] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [confirmDeleteOpenWharehouse, setConfirmDeleteOpenWharehouse] = useState(false);
+    const [confirmDeleteOpenOrganization, setConfirmDeleteOpenOrganization] = useState(false);
     const [selectedWarehouseToDelete, setSelectedWarehouseToDelete] = useState(null);
-    const [innError, setInnError] = useState(false); // Состояние ошибки для УНП
+    const [innError, setInnError] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -45,7 +46,7 @@ const WarehousePage = () => {
     const fetchOrganization = async () => {
         const id = localStorage.getItem("id");
         try {
-            const response = await axios.get(`http://localhost:8765/organization-service/api/organization/id?id=${id}`, {
+            const response = await api.get(`/organization-service/api/organization/id?id=${id}`, {
                 headers: { id },
             });
             if (response?.data) setOrganization(response.data);
@@ -58,7 +59,7 @@ const WarehousePage = () => {
     const fetchWarehouses = async () => {
         try {
             const token = localStorage.getItem("jwtToken");
-            const response = await axios.get("http://localhost:8765/warehouse-service/api/warehouse", {
+            const response = await api.get("/warehouse-service/api/warehouse", {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setWarehouses(response.data || []);
@@ -79,7 +80,7 @@ const WarehousePage = () => {
         try {
             setIsSubmitting(true);
             const token = localStorage.getItem("jwtToken");
-            const response = await axios.post("http://localhost:8765/organization-service/api/organization", newOrganization, {
+            const response = await api.post("/organization-service/api/organization", newOrganization, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             localStorage.setItem("id", response?.data?.id);
@@ -107,7 +108,7 @@ const WarehousePage = () => {
         try {
             setIsSubmitting(true);
             const token = localStorage.getItem("jwtToken");
-            const response = await axios.put(`http://localhost:8765/organization-service/api/organization/${organization.inn}`, {
+            const response = await api.put(`/organization-service/api/organization/${organization.inn}`, {
                 name: organization.name,
                 address: organization.address,
             }, {
@@ -126,7 +127,7 @@ const WarehousePage = () => {
     const handleDeleteOrganization = async () => {
         try {
             const token = localStorage.getItem("jwtToken");
-            await axios.delete(`http://localhost:8765/organization-service/api/organization/${organization.inn}`, {
+            await api.delete(`/organization-service/api/organization/${organization.inn}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             toast.success("Организация успешно удалена!");
@@ -142,7 +143,7 @@ const WarehousePage = () => {
         if (!selectedWarehouseToDelete) return;
         try {
             const token = localStorage.getItem("jwtToken");
-            await axios.delete(`http://localhost:8765/warehouse-service/api/warehouse/${selectedWarehouseToDelete}`, {
+            await api.delete(`/warehouse-service/api/warehouse/${selectedWarehouseToDelete}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             toast.success("Склад успешно удалён!");
@@ -150,6 +151,7 @@ const WarehousePage = () => {
         } catch {
             toast.error("Ошибка при удалении склада.");
         } finally {
+            setConfirmDeleteOpenWharehouse(false)
             setSelectedWarehouseToDelete(null);
         }
     };
@@ -189,7 +191,7 @@ const WarehousePage = () => {
         try {
             setIsSubmitting(true);
             const token = localStorage.getItem("jwtToken");
-            await axios.post("http://localhost:8765/warehouse-service/api/warehouse", newWarehouse, {
+            await api.post("/warehouse-service/api/warehouse", newWarehouse, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             toast.success("Склад успешно создан!");
@@ -225,7 +227,10 @@ const WarehousePage = () => {
                 <Button
                     variant="outlined"
                     color="error"
-                    onClick={() => setSelectedWarehouseToDelete(params.row.id)}
+                    onClick={() => {
+                        setSelectedWarehouseToDelete(params.row.id)
+                        setConfirmDeleteOpenWharehouse(true)
+                    }}
                 >
                     Удалить
                 </Button>
@@ -273,7 +278,7 @@ const WarehousePage = () => {
                         <Button variant="contained" sx={{ mr: 2, mb: 2 }} onClick={organization ? handleUpdateOrganization : handleCreateOrganization} disabled={isSubmitting}>
                             {organization ? "Редактировать" : "Добавить организацию"}
                         </Button>
-                        <Button variant="outlined" color="error" disabled={!organization} onClick={() => setConfirmDeleteOpen(true)}>
+                        <Button variant="outlined" color="error" sx={{ mb: 2 }} disabled={!organization} onClick={() => setConfirmDeleteOpenOrganization(true)}>
                             Удалить организацию
                         </Button>
                     </Grid>
@@ -372,11 +377,20 @@ const WarehousePage = () => {
                 <Button variant="contained" color="primary" sx={{ mt: 4, ml: 2 }} onClick={handleCreateWarehouse} disabled={isSubmitting}>Добавить склад</Button>
             </Box>
 
-            <Dialog open={confirmDeleteOpen} onClose={() => setConfirmDeleteOpen(false)}>
+            <Dialog open={confirmDeleteOpenOrganization} onClose={() => setConfirmDeleteOpenOrganization(false)}>
+                <DialogTitle>Удаление склада</DialogTitle>
+                <DialogContent>Вы уверены, что хотите удалить организацию?</DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmDeleteOpenOrganization(false)} color="primary">Отмена</Button>
+                    <Button onClick={handleDeleteOrganization} color="error">Удалить</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={confirmDeleteOpenWharehouse} onClose={() => setConfirmDeleteOpenWharehouse(false)}>
                 <DialogTitle>Удаление склада</DialogTitle>
                 <DialogContent>Вы уверены, что хотите удалить этот склад?</DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setConfirmDeleteOpen(false)} color="primary">Отмена</Button>
+                    <Button onClick={() => setConfirmDeleteOpenWharehouse(false)} color="primary">Отмена</Button>
                     <Button onClick={confirmDeleteWarehouse} color="error">Удалить</Button>
                 </DialogActions>
             </Dialog>

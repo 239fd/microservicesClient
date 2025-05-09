@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-    Box,
-    Typography,
-    FormControlLabel,
-    Checkbox,
     Button,
+    Box,
+    Checkbox,
+    FormControlLabel,
+    Typography,
 } from "@mui/material";
-import axios from "axios";
+import { api } from "../Redux/axios";
 import { toast } from "react-toastify";
 import NavBar from "../Components/NavBar";
 import { DataGrid } from "@mui/x-data-grid";
@@ -25,22 +25,64 @@ import {
     Line,
     CartesianGrid,
 } from "recharts";
-import HeatMapGrid from "react-heatmap-grid";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import {
+    Document,
+    Page,
+    Text,
+    View,
+    StyleSheet,
+    PDFDownloadLink,
+    Font,
+    Image,
+} from "@react-pdf/renderer";
+import roboto from "../fonts/Roboto/static/Roboto-Regular.ttf";
+import { toPng } from "html-to-image";
+
+Font.register({ family: "Roboto", src: roboto });
+
+const styles = StyleSheet.create({
+    page: {
+        fontFamily: "Roboto",
+        backgroundColor: "#ffffff",
+        padding: 30,
+    },
+    section: {
+        marginBottom: 20,
+    },
+    heading: {
+        fontSize: 18,
+        marginBottom: 10,
+    },
+    table: {
+        display: "flex",
+        flexDirection: "column",
+        border: "1px solid black",
+    },
+    tableRow: {
+        display: "flex",
+        flexDirection: "row",
+        padding: 5,
+    },
+    tableCell: {
+        border: "1px solid black",
+        padding: 5,
+        flex: 1,
+    },
+});
 
 const ReportsPage = () => {
     const [warehouseStats, setWarehouseStats] = useState([]);
     const [showBar, setShowBar] = useState(true);
+    const [showPie, setShowPie] = useState(true);
+    const [showLine, setShowLine] = useState(true);
     const [showTable, setShowTable] = useState(true);
-    const [showPie, setShowPie] = useState(false);
-    const [showLine, setShowLine] = useState(false);
+    const [barChartImage, setBarChartImage] = useState(null);
+    const [pieChartImage, setPieChartImage] = useState(null);
+    const [lineChartImage, setLineChartImage] = useState(null);
 
     const barRef = useRef();
-    const tableRef = useRef();
     const pieRef = useRef();
     const lineRef = useRef();
-    const heatmapRef = useRef();
 
     useEffect(() => {
         fetchWarehouseStats();
@@ -49,10 +91,9 @@ const ReportsPage = () => {
     const fetchWarehouseStats = async () => {
         try {
             const token = localStorage.getItem("jwtToken");
-            const resp = await axios.get(
-                "http://localhost:8765/warehouse-service/api/statistics/warehouses",
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const resp = await api.get("/warehouse-service/api/statistics/warehouses", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             if (resp.data) {
                 const cleaned = resp.data.map(({ warehouseId, ...rest }) => rest);
                 setWarehouseStats(cleaned);
@@ -64,62 +105,72 @@ const ReportsPage = () => {
         }
     };
 
-    const generatePDF = async () => {
-        if (
-            !showBar &&
-            !showTable &&
-            !showPie &&
-            !showLine
-        ) {
-            toast.error("Пожалуйста, выберите хотя бы одну секцию для отчета.");
-            return;
-        }
-
-        const doc = new jsPDF("p", "mm", "a4");
-        let y = 10;
-        const sections = [
-            { show: showBar, ref: barRef, title: "Гистограмма: Ячеек и заполнено" },
-            {
-                show: showPie,
-                ref: pieRef,
-                title: "Круговая диаграмма: заполнено/свободно",
-            },
-            {
-                show: showLine,
-                ref: lineRef,
-                title: "Линейный график: средняя загрузка стеллажей",
-            },
-            { show: showTable, ref: tableRef, title: "Информация: Таблица складов" },
-        ];
-
-        for (const sec of sections) {
-            if (!sec.show || !sec.ref.current) continue;
-            const canvas = await html2canvas(sec.ref.current);
-            const img = canvas.toDataURL("image/png");
-            const props = doc.getImageProperties(img);
-            const w = doc.internal.pageSize.getWidth() - 20;
-            const h = (props.height * w) / props.width;
-            doc.text(sec.title, 10, y);
-            y += 5;
-            doc.addImage(img, "PNG", 10, y, w, h);
-            y += h + 10;
-            if (y + h > doc.internal.pageSize.getHeight() - 20) {
-                doc.addPage();
-                y = 10;
+    const captureChartImages = async () => {
+        try {
+            if (showBar && barRef.current) {
+                const dataUrl = await toPng(barRef.current, { pixelRatio: 2 });
+                setBarChartImage(dataUrl);
             }
+            if (showPie && pieRef.current) {
+                const dataUrl = await toPng(pieRef.current, { pixelRatio: 2 });
+                setPieChartImage(dataUrl);
+            }
+            if (showLine && lineRef.current) {
+                const dataUrl = await toPng(lineRef.current, { pixelRatio: 2 });
+                setLineChartImage(dataUrl);
+            }
+        } catch (err) {
+            console.error("Ошибка захвата диаграмм:", err);
         }
-
-        doc.save("warehouse_report.pdf");
     };
 
-    const totalFilled = warehouseStats.reduce(
-        (sum, w) => sum + w.filledCellCount,
-        0
+    const WarehouseReportPDF = () => (
+        <Document>
+            <Page style={styles.page}>
+                <View style={styles.section}>
+                    <Text style={styles.heading}>Заполненность ячеек на складах</Text>
+
+                    <View style={{ flexDirection: "column", gap: 20 }}>
+                        {showBar && barChartImage && (
+                            <Image
+                                src={barChartImage}
+                                style={{ width: "100%", height: 250, marginBottom: 10 }}
+                            />
+                        )}
+                        {showPie && pieChartImage && (
+                            <Image
+                                src={pieChartImage}
+                                style={{ width: "100%", height: 250, marginBottom: 10 }}
+                            />
+                        )}
+                        {showLine && lineChartImage && (
+                            <Image
+                                src={lineChartImage}
+                                style={{ width: "100%", height: 250, marginBottom: 10 }}
+                            />
+                        )}
+                    </View>
+
+                    {showTable && (
+                        <View style={styles.table}>
+                            {warehouseStats.map((row, index) => (
+                                <View key={index} style={styles.tableRow}>
+                                    <Text style={styles.tableCell}>{row.warehouseName}</Text>
+                                    <Text style={styles.tableCell}>{row.cellCount}</Text>
+                                    <Text style={styles.tableCell}>{row.filledCellCount}</Text>
+                                    <Text style={styles.tableCell}>{row.productCount}</Text>
+                                    <Text style={styles.tableCell}>{row.totalProductValue}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+                </View>
+            </Page>
+        </Document>
     );
-    const totalCells = warehouseStats.reduce(
-        (sum, w) => sum + w.cellCount,
-        0
-    );
+
+    const totalFilled = warehouseStats.reduce((sum, w) => sum + w.filledCellCount, 0);
+    const totalCells = warehouseStats.reduce((sum, w) => sum + w.cellCount, 0);
     const pieData = [
         { name: "Заполнено", value: totalFilled },
         { name: "Свободно", value: totalCells - totalFilled },
@@ -136,49 +187,45 @@ const ReportsPage = () => {
 
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 2 }}>
                     <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={showBar}
-                                onChange={() => setShowBar(!showBar)}
-                            />
-                        }
+                        control={<Checkbox checked={showBar} onChange={() => setShowBar(!showBar)} />}
                         label="Гистограмма"
                     />
                     <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={showPie}
-                                onChange={() => setShowPie(!showPie)}
-                            />
-                        }
+                        control={<Checkbox checked={showPie} onChange={() => setShowPie(!showPie)} />}
                         label="Круговая диаграмма"
                     />
                     <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={showLine}
-                                onChange={() => setShowLine(!showLine)}
-                            />
-                        }
+                        control={<Checkbox checked={showLine} onChange={() => setShowLine(!showLine)} />}
                         label="Линейный график"
                     />
-
                     <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={showTable}
-                                onChange={() => setShowTable(!showTable)}
-                            />
-                        }
+                        control={<Checkbox checked={showTable} onChange={() => setShowTable(!showTable)} />}
                         label="Таблица"
                     />
-                    <Button variant="contained" onClick={generatePDF}>
-                        Скачать отчет (PDF)
+                </Box>
+
+                <Box mb={2}>
+                    <Button variant="contained" onClick={captureChartImages}>
+                        Обновить изображения диаграмм
                     </Button>
+                    {(barChartImage || pieChartImage || lineChartImage) && (
+                        <Box mt={1}>
+                            <PDFDownloadLink
+                                document={<WarehouseReportPDF />}
+                                fileName="warehouse_report.pdf"
+                            >
+                                {({ loading }) =>
+                                    <Button variant="contained">
+                                        {loading ? "Генерация PDF..." : "Скачать PDF-отчет"}
+                                    </Button>
+                                }
+                            </PDFDownloadLink>
+                        </Box>
+                    )}
                 </Box>
 
                 {showBar && (
-                    <div ref={barRef}>
+                    <Box ref={barRef} sx={{ mt: 4, maxWidth:'100%'}}>
                         <Typography variant="h6" mb={1}>
                             Гистограмма: Ячеек и заполнено
                         </Typography>
@@ -192,40 +239,32 @@ const ReportsPage = () => {
                                 <Bar dataKey="filledCellCount" fill="#82ca9d" name="Заполнено" />
                             </BarChart>
                         </ResponsiveContainer>
-                    </div>
+                    </Box>
                 )}
 
                 {showPie && (
-                    <div ref={pieRef}>
+                    <Box ref={pieRef} sx={{ mt: 4, maxWidth:'100%' }}>
                         <Typography variant="h6" mb={1}>
-                            Круговая диаграмма: заполнено/свободно
+                            Круговая диаграмма: Заполнено / Свободно
                         </Typography>
                         <ResponsiveContainer width="100%" height={250}>
                             <PieChart>
-                                <Pie
-                                    data={pieData}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    cx="50%"
-                                    cy="50%"
-                                    outerRadius={80}
-                                    label
-                                >
+                                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
                                     {pieData.map((_, idx) => (
                                         <Cell key={idx} fill={pieColors[idx % pieColors.length]} />
                                     ))}
                                 </Pie>
                                 <Tooltip />
-                                <Legend verticalAlign="bottom" height={36} />
+                                <Legend verticalAlign="bottom" />
                             </PieChart>
                         </ResponsiveContainer>
-                    </div>
+                    </Box>
                 )}
 
                 {showLine && (
-                    <div ref={lineRef}>
+                    <Box ref={lineRef} sx={{ mt: 4, maxWidth:'100%'}}>
                         <Typography variant="h6" mb={1}>
-                            Линейный график: средняя загрузка стеллажей
+                            Линейный график: Средняя вместимость стеллажей
                         </Typography>
                         <ResponsiveContainer width="100%" height={250}>
                             <LineChart data={warehouseStats}>
@@ -238,50 +277,33 @@ const ReportsPage = () => {
                                     type="monotone"
                                     dataKey="averageRackCapacity"
                                     stroke="#8884d8"
-                                    name="Средняя загрузка"
+                                    name="Средняя вместимость"
                                 />
                             </LineChart>
                         </ResponsiveContainer>
-                    </div>
+                    </Box>
                 )}
 
                 {showTable && (
-                    <Box
-                        ref={tableRef}
-                        sx={{
-                            height: 400,
-                            mt: 4,
-                            "& .MuiDataGrid-footerContainer": { display: "none" },
-                        }}
-                    >
+                    <Box sx={{ mt: 4 }}>
                         <Typography variant="h6" mb={1}>
-                            Информация: Таблица складов
+                            Таблица складов
                         </Typography>
-                        <DataGrid
-                            rows={warehouseStats.map((row, i) => ({ id: i, ...row }))}
-                            columns={[
-                                { field: "warehouseName", headerName: "Склад", flex: 1 },
-                                { field: "rackCount", headerName: "Стеллажи", flex: 1 },
-                                { field: "cellCount", headerName: "Ячеек", flex: 1 },
-                                {
-                                    field: "filledCellCount",
-                                    headerName: "Заполнено",
-                                    flex: 1,
-                                },
-                                {
-                                    field: "productCount",
-                                    headerName: "Кол-во товаров",
-                                    flex: 1,
-                                },
-                                {
-                                    field: "totalProductValue",
-                                    headerName: "Общий объем",
-                                    flex: 1,
-                                },
-                            ]}
-                            pageSize={warehouseStats.length || 5}
-                            autoHeight
-                        />
+                        <div style={{ height: 400 }}>
+                            <DataGrid
+                                rows={warehouseStats.map((row, i) => ({ id: i, ...row }))}
+                                columns={[
+                                    { field: "warehouseName", headerName: "Склад", flex: 1 },
+                                    { field: "rackCount", headerName: "Стеллажи", flex: 1 },
+                                    { field: "cellCount", headerName: "Ячеек", flex: 1 },
+                                    { field: "filledCellCount", headerName: "Заполнено", flex: 1 },
+                                    { field: "productCount", headerName: "Кол-во товаров", flex: 1 },
+                                    { field: "totalProductValue", headerName: "Общий объем", flex: 1 },
+                                ]}
+                                pageSize={warehouseStats.length || 5}
+                                autoHeight
+                            />
+                        </div>
                     </Box>
                 )}
             </Box>

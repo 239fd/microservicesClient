@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "../axios";
+import {instance} from "../axios";
 
 const registerUser = async (params, rejectWithValue, userType) => {
     try {
-        const response = await axios.post(
+        const response = await instance.post(
             "/auth-service/auth/register",
             params,
             {
@@ -46,7 +46,7 @@ export const fetchLoginData = createAsyncThunk(
     "auth/fetchLoginData",
     async (params, { rejectWithValue }) => {
         try {
-            const response = await axios.post("/auth-service/auth/login", params);
+            const response = await instance.post("/auth-service/auth/login", params);
 
             if (response.status !== 200) {
                 throw new Error(response.data.message || "Ошибка входа");

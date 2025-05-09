@@ -7,7 +7,7 @@ import {
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import NavBar from "../Components/NavBar";
-import axios from "axios";
+import {api} from "../Redux/axios";
 import { toast } from "react-toastify";
 
 const RevaluationPage = () => {
@@ -24,8 +24,8 @@ const RevaluationPage = () => {
     const fetchProducts = async () => {
         try {
             const token = localStorage.getItem("jwtToken");
-            const response = await axios.get(
-                "http://localhost:8765/product-service/api/product/all",
+            const response = await api.get(
+                "/product-service/api/product/all",
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -93,8 +93,8 @@ const RevaluationPage = () => {
                 newPrice: pricesArray,
             };
 
-            const response = await axios.post(
-                "http://localhost:8765/product-service/api/product/revaluation",
+            const response = await api.post(
+                "/product-service/api/product/revaluation",
                 requestBody,
                 {
                     headers: {
@@ -176,6 +176,25 @@ const RevaluationPage = () => {
                         </Button>
                     </Grid>
                 </Grid>
+                {selectedProducts.length > 0 && newPrices && (
+                    <Box sx={{ mt: 2, width: "100%" }}>
+                        <strong>Выбранные товары и новые цены:</strong>
+                        <Box sx={{ mt: 1, pl: 2 }}>
+                            {(() => {
+                                const pricesArray = newPrices.split(",").map((p) => p.trim());
+                                return selectedProducts.map((id, index) => {
+                                    const product = products.find((p) => p.id === id);
+                                    const price = pricesArray[index];
+                                    return product ? (
+                                        <div key={id}>
+                                            {product.name}: {price}
+                                        </div>
+                                    ) : null;
+                                });
+                            })()}
+                        </Box>
+                    </Box>
+                )}
                 <Grid container spacing={2} alignItems="center" sx={{ mt: 2 }}>
                     <Grid item xs={12}>
                         <Button
